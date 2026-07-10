@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doctor Dashboard — Platform</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/search.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/dashboard-sections.css">
+
+  <!-- 🔒 PERF FIX: Leaflet (map lib, ~150KB of CSS+JS) used to load here
+       unconditionally on every dashboard visit, blocking initial render,
+       even though the map only appears far down the page inside the
+       clinic-info form. It's now lazy-loaded by js/dashboard-app.js only
+       once that section is about to scroll into view. -->
+
+  <script>
+    (function() {
+      var theme = localStorage.getItem('platform_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <script type="module">
+    // ─────────────────────────────────────────────────────────────────────
+    // 🔒 AUTH GUARD — protects this page from unauthenticated visitors
+    // If no user is signed in, redirect to signin.html immediately.
+    // Uses the shared js/firebase.js module (single source of Firebase config).
+    // ─────────────────────────────────────────────────────────────────────
+    import { auth, onAuthStateChanged, signOutDoctor } from './js/firebase.js';
+    import { initDashboardApp } from './js/dashboard-app.js';
+
+    window.firebaseAuth = auth;
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = 'signin.html';
+      } else {
+        window.currentDoctor = user;
+        document.getElementById('doctor-name')?.replaceChildren(
+          document.createTextNode(user.displayName || user.email || 'Dr.')
+        );
+        const avatar = document.getElementById('doctor-avatar');
+        if (avatar && user.photoURL) {
+          avatar.replaceChildren();
+          const img = document.createElement('img');
+          img.src = user.photoURL;
+          img.alt = '';
+          avatar.appendChild(img);
+        }
+        initDashboardApp(user.uid);
+      }
+    });
+
+    window.signOutDoctor = signOutDoctor;
+  </script>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="logo-mark">
+    <span class="logo-dot"></span>
+    <span>Platform</span>
+  </a>
+
+  <div class="nav-actions">
+    <button class="lang-btn" id="btn-lang" data-lang-toggle>العربية</button>
+
+    <button class="icon-btn" id="btn-theme" data-i18n-label="theme_toggle_label" aria-label="Toggle theme">
+      <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+      <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+
+    <!-- Doctor account chip — replaces "Create My Clinic" on this page -->
+    <button class="doctor-chip" id="btn-doctor-account" aria-label="Doctor account">
+      <span class="doctor-chip-avatar" id="doctor-avatar">DR</span>
+      <span class="doctor-chip-name" id="doctor-name">Dr. Doctor Name</span>
+    </button>
+  </div>
+</nav>
+
+<section class="hero">
+  <div id="aurora-bg" class="aurora-container"></div>
+
+  <div class="hero-inner">
+    <div class="hero-grid">
+
+      <!-- ═══ Side cards (right in RTL) — filled by js/dashboard-app.js ═══ -->
+      <div class="hero-side-col">
+        <div class="hero-side-card">
+          <div class="k">حجوزات اليوم</div>
+          <div class="v" id="hero-bookings-today">—</div>
+        </div>
+        <div class="hero-side-card">
+          <div class="k">حالة الحجز الإلكتروني</div>
+          <div class="v" id="hero-booking-status">—</div>
+        </div>
+      </div>
+
+      <!-- ═══ AI search bar — stays exactly here, exact same size, untouched ═══ -->
+      <div id="search-poda">
+        <div class="search-glow"></div>
+        <div class="search-dark-border"></div>
+        <div class="search-border"></div>
+
+        <div class="search-input-wrap">
+          <input type="search" id="search-input" class="search-input"
+                 placeholder="مساعدك الطبي"
+                 autocomplete="off">
+          <span class="search-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="11" cy="11" r="7"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <!-- ═══ Side cards (left in RTL) ═══ -->
+      <div class="hero-side-col">
+        <div class="hero-side-card">
+          <div class="k">الساعات المتاحة اليوم</div>
+          <div class="v" id="hero-available-today">—</div>
+        </div>
+        <div class="hero-side-card">
+          <div class="k">آخر تحديث للبروفايل</div>
+          <div class="v muted" id="hero-last-update">—</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="ai-result" class="ai-result hidden"></div>
+  </div>
+</section>
+
+<main class="dashboard-main">
+
+  <!-- ═══ Doctor profile — from /api/clinics, empty-state if not filled yet ═══ -->
+  <div class="profile-hero" id="profile-hero">
+    <!-- populated by js/dashboard-app.js -->
+  </div>
+  <input type="file" id="avatar-upload-input" accept="image/*" class="hidden" style="display:none;">
+
+  <!-- ═══ Quick stats ═══ -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div>
+        <div class="stat-label">إجمالي الحجوزات</div>
+        <div class="stat-value" id="stat-total-bookings">—</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div class="stat-card">
+      <div>
+        <div class="stat-label">ساعاتي المحددة</div>
+        <div class="stat-value" id="stat-selected-hours">—</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    </div>
+    <div class="stat-card">
+      <div>
+        <div class="stat-label">الساعات المتاحة</div>
+        <div class="stat-value" id="stat-available-hours">—</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+    </div>
+    <div class="stat-card">
+      <div>
+        <div class="stat-label">تقييمي</div>
+        <div class="stat-value" id="stat-rating-average">—</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+    </div>
+  </div>
+
+  <!-- ═══ Bookings + Work hours ═══ -->
+  <div class="section-row">
+
+    <!-- Bookings -->
+    <div class="section-card">
+      <div class="section-head">
+        <span class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          حجوزاتي
+          <span id="bookings-count" style="font-weight:400;color:var(--text-muted);font-size:11px;"></span>
+        </span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="date-filter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <input type="date" id="bookings-date-input">
+          </div>
+          <button class="refresh-btn" id="bookings-refresh-btn" aria-label="تحديث" title="تحديث">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="bookings-list" id="bookings-list">
+        <div class="empty-state-mini">جاري التحميل...</div>
+      </div>
+    </div>
+
+    <!-- Schedule settings: slot duration + recurring weekly template -->
+    <div class="section-card">
+      <div class="section-head">
+        <span class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          إعدادات الجدولة
+        </span>
+      </div>
+
+      <div class="schedule-settings-row">
+        <label for="slot-duration-select">المدة المتوقعة للحصة</label>
+        <select id="slot-duration-select">
+          <option value="15">15 دقيقة</option>
+          <option value="30" selected>30 دقيقة (افتراضي)</option>
+          <option value="45">45 دقيقة</option>
+          <option value="60">60 دقيقة</option>
+        </select>
+      </div>
+
+      <p class="avail-hint" id="template-lock-status">
+        وضع التعديل — غيّر المدة والأوقات ثم اضغط "تثبيت" لتفعيلها أسبوعياً.
+      </p>
+
+      <button type="button" class="btn-secondary" id="template-lock-toggle-btn" style="width:100%;">
+        تثبيت الجدول الدائم لأول مرة
+      </button>
+    </div>
+
+    <!-- Work hours -->
+    <div class="section-card">
+      <div class="section-head">
+        <span class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          أوقات العمل
+        </span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="date-filter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <input type="date" id="avail-date-input">
+          </div>
+          <button class="refresh-btn" id="avail-refresh-btn" aria-label="تحديث" title="تحديث">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="avail-legend">
+        <span><span class="legend-dot free"></span> متاح</span>
+        <span><span class="legend-dot sel"></span> مُختار</span>
+        <span><span class="legend-dot book"></span> محجوز</span>
+      </div>
+
+      <div class="slots-period-label">الفترة الصباحية</div>
+      <div class="slots-grid" id="slots-grid-morning"></div>
+
+      <div class="slots-period-label">الفترة المسائية</div>
+      <div class="slots-grid" id="slots-grid-afternoon"></div>
+
+      <button type="button" class="btn-secondary" id="day-cancel-btn" style="width:100%; margin-top:10px;" hidden>
+        إلغاء اليوم بالكامل
+      </button>
+
+      <p class="avail-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <span>كل ضغطة تُحفظ فوراً. لإلغاء موعد محجوز، استخدم قسم "حجوزاتي".</span>
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ═══ My ratings ═══ -->
+  <div class="section-card" style="margin-bottom:18px;">
+    <div class="section-head">
+      <span class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+        آراء مرضاي
+      </span>
+    </div>
+    <div id="dashboard-reviews-list">
+      <div class="empty-state-mini">جاري التحميل...</div>
+    </div>
+  </div>
+
+  <!-- ═══ Clinic Info Form — manual editing, complements the AI flow ═══ -->
+  <div class="section-card clinic-form-card">
+    <div class="section-head">
+      <span class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
+        معلومات العيادة
+      </span>
+    </div>
+    <p class="form-group-hint" style="margin-bottom:20px;">هاذي البيانات تظهر للمرضى في صفحة عيادتك العمومية</p>
+
+    <form id="clinic-form">
+
+      <!-- قسم 1: معلومات أساسية -->
+      <div class="form-group">
+        <div class="form-group-title">معلومات أساسية</div>
+        <div class="form-group-hint">اسمك وتخصصك ونبذة قصيرة عنك</div>
+
+        <div class="form-row-2">
+          <div class="form-field">
+            <label for="f-doctorName">اسم الطبيب</label>
+            <input type="text" id="f-doctorName" placeholder="د. أحمد بلعيد">
+          </div>
+          <div class="form-field">
+            <label for="f-specialty">التخصص</label>
+            <input type="text" id="f-specialty" placeholder="طب الأسنان — تقويم">
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="f-clinicName">اسم العيادة</label>
+          <input type="text" id="f-clinicName" placeholder="مثال: عيادة النور لطب الأسنان">
+        </div>
+
+        <div class="form-field">
+          <label for="f-bio">نبذة قصيرة</label>
+          <textarea id="f-bio" rows="3" placeholder="طبيب بخبرة X سنوات، متخصص في..."></textarea>
+        </div>
+      </div>
+
+      <!-- قسم 2: التواصل والموقع -->
+      <div class="form-group">
+        <div class="form-group-title">التواصل والموقع</div>
+        <div class="form-group-hint">كيفاش المريض يوصل لك أو يلقى عيادتك</div>
+
+        <div class="form-row-2">
+          <div class="form-field">
+            <label for="f-phone">رقم الهاتف</label>
+            <input type="tel" id="f-phone" placeholder="0555 12 34 56">
+          </div>
+          <div class="form-field">
+            <label for="f-whatsapp">واتساب</label>
+            <input type="tel" id="f-whatsapp" placeholder="0555 12 34 56">
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="f-address">العنوان</label>
+          <input type="text" id="f-address" placeholder="حي النصر، شارع الاستقلال، الجزائر">
+        </div>
+
+        <div class="form-field">
+          <label>الموقع على الخريطة</label>
+          <div class="map-field-wrap">
+            <div id="clinic-map" class="clinic-map"></div>
+            <p class="map-hint">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;display:inline;vertical-align:-1px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              اضغط على الخريطة أو اسحب الدبوس لتحديد موقع عيادتك بدقة
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- قسم 3: الخدمات -->
+      <div class="form-group">
+        <div class="form-group-title">الخدمات المقدّمة</div>
+        <div class="form-group-hint">أضف الخدمات اللي تقدمها عيادتك</div>
+        <div class="chips-editor" id="services-editor">
+          <!-- populated by js/dashboard-app.js -->
+        </div>
+      </div>
+
+      <!-- قسم 4: الحجز والسعر -->
+      <div class="form-group">
+        <div class="form-group-title">الحجز والسعر</div>
+        <div class="form-group-hint">تحكم في إتاحة الحجز الإلكتروني وسعر الكشف</div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">الحجز الإلكتروني</div>
+            <div class="toggle-sub">لو موقوف، يظهر رقم هاتفك للمريض بدل زر الحجز</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="f-bookingEnabled" checked>
+            <span class="switch-track"></span>
+          </label>
+        </div>
+
+        <div class="form-field">
+          <label for="f-price">سعر الكشف (اختياري، للعرض فقط)</label>
+          <input type="number" id="f-price" min="0" step="1" placeholder="مثال: 1500">
+        </div>
+      </div>
+
+      <!-- قسم 6: النشر — الجزء اللي كان ناقص بالكامل من قبل. بدون هذا التبديل
+           لم تكن صفحة العيادة تظهر لأي مريض حتى لو امتلأت كل الحقول أعلاه. -->
+      <div class="form-group">
+        <div class="form-group-title">النشر</div>
+        <div class="form-group-hint">لن يظهر ملفك في الصفحة الرئيسية للمرضى إلا بعد التفعيل هنا</div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label" id="publish-status-label">غير منشورة</div>
+            <div class="toggle-sub">فعّل هذا الخيار ليظهر ملفك في قائمة العيادات على الصفحة الرئيسية</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="f-isPublished">
+            <span class="switch-track"></span>
+          </label>
+        </div>
+
+        <div class="publish-link-row" id="publish-link-row" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <a href="#" id="publish-preview-link" target="_blank" rel="noopener">شاهد صفحتك كما يراها المريض</a>
+          <button type="button" id="publish-copy-link" class="btn-copy-link">نسخ الرابط</button>
+        </div>
+      </div>
+
+      <!-- قسم 7: صور العيادة -->
+      <div class="form-group">
+        <div class="form-group-title">صور العيادة</div>
+        <div class="form-group-hint">صور حقيقية من عيادتك (حتى 6 صور) — تساعد المريض يثق فيك أكثر</div>
+        <div class="photos-strip" id="clinic-photos-strip">
+          <!-- populated by js/dashboard-app.js -->
+        </div>
+        <input type="file" id="clinic-photos-input" accept="image/*" multiple class="hidden">
+      </div>
+
+      <div class="form-save-bar">
+        <button type="submit" class="btn-save-form" id="btn-save-clinic-form">حفظ التغييرات</button>
+      </div>
+
+    </form>
+  </div>
+
+</main>
+
+<div id="site-footer"></div>
+
+<script type="module">
+import { initI18n, toggleLang } from './js/i18n.js';
+import { initTheme, toggleTheme, getTheme } from './js/theme.js';
+import { mountAurora } from './js/aurora.js';
+import { mountFooter } from './js/footer.js';
+
+initTheme();
+initI18n();
+mountFooter();
+
+function syncThemeIcon() {
+  const isDark = getTheme() === 'dark';
+  document.getElementById('theme-icon-sun').classList.toggle('hidden', !isDark);
+  document.getElementById('theme-icon-moon').classList.toggle('hidden', isDark);
+}
+syncThemeIcon();
+
+document.getElementById('btn-theme').addEventListener('click', () => {
+  toggleTheme();
+  syncThemeIcon();
+});
+
+document.getElementById('btn-lang').addEventListener('click', () => {
+  toggleLang();
+});
+
+mountAurora('aurora-bg', { amplitude: 0.9, blend: 0.5, speed: 0.6 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// 🤖 AI ASSISTANT BAR — calls our own secure backend (/api/ai-generate)
+// The Gemini API key never appears here; it stays server-side on Vercel.
+// ─────────────────────────────────────────────────────────────────────────
+const searchInput = document.getElementById('search-input');
+const aiResult = document.getElementById('ai-result');
+
+async function runAIQuery(text) {
+  if (!text.trim()) return;
+  aiResult.classList.remove('hidden');
+  aiResult.innerHTML = '...جاري التفكير';
+
+  try {
+    const res = await fetch('/api/ai-generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: text })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      aiResult.textContent = data.error || 'حدث خطأ، حاول مرة أخرى.';
+      return;
+    }
+
+    renderAIResult(data.result);
+
+  } catch (err) {
+    aiResult.textContent = 'تعذر الاتصال بالمساعد الطبي.';
+  }
+}
+
+function renderAIResult(result) {
+  if (typeof result === 'string' || result?.raw) {
+    aiResult.textContent = typeof result === 'string' ? result : result.raw;
+    return;
+  }
+
+  const { specialty, yearsOfExperience, bio, services } = result || {};
+  aiResult.innerHTML = `
+    <div style="margin-bottom:10px;">
+      ${specialty ? `<div><strong>التخصص:</strong> ${escapeHtmlLocal(specialty)}</div>` : ''}
+      ${yearsOfExperience ? `<div><strong>سنوات الخبرة:</strong> ${escapeHtmlLocal(String(yearsOfExperience))}</div>` : ''}
+      ${bio ? `<div style="margin-top:6px;">${escapeHtmlLocal(bio)}</div>` : ''}
+      ${Array.isArray(services) && services.length ? `<div style="margin-top:6px;">${services.map(s => `<span style="display:inline-block;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--r-full);padding:2px 10px;font-size:11px;margin:2px;">#${escapeHtmlLocal(s)}</span>`).join('')}</div>` : ''}
+    </div>
+    <button id="btn-save-ai-profile" style="background:var(--accent-500);color:#fff;border:none;border-radius:var(--r-md);padding:9px 18px;font-size:13px;font-weight:700;">حفظ في ملفي المهني</button>
+  `;
+
+  document.getElementById('btn-save-ai-profile')?.addEventListener('click', async (e) => {
+    const btn = e.target;
+    btn.disabled = true;
+    btn.textContent = 'جاري الحفظ...';
+    try {
+      const user = window.currentDoctor;
+      const token = await user.getIdToken();
+      const saveRes = await fetch('/api/clinics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          doctorName: user.displayName || null,
+          specialty: specialty || null,
+          bio: bio || null,
+          services: Array.isArray(services) ? services : [],
+        }),
+      });
+      if (!saveRes.ok) throw new Error('فشل الحفظ');
+      btn.textContent = '✓ تم الحفظ';
+      // Refresh the profile hero card to reflect the newly saved data
+      window.dispatchEvent(new CustomEvent('dashboard:profile-saved'));
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'حاول مرة أخرى';
+    }
+  });
+}
+
+function escapeHtmlLocal(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    runAIQuery(searchInput.value);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// 🔗 DOCTOR ACCOUNT CHIP — wiring point
+// Replace placeholder name/avatar with real signed-in doctor data, e.g.:
+//   doctor-avatar  → doctor's photo URL or initials
+//   doctor-name    → doctor's display name
+// On click → open account menu / navigate to profile settings.
+// ─────────────────────────────────────────────────────────────────────────
+document.getElementById('btn-doctor-account').addEventListener('click', async () => {
+  // TODO: replace with a proper account menu (profile / settings / sign out)
+  const wantsSignOut = confirm('Sign out?');
+  if (wantsSignOut) {
+    await window.signOutDoctor();
+    window.location.href = 'signin.html';
+  }
+});
+</script>
+
+</body>
+</html>

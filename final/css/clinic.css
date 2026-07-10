@@ -1,0 +1,119 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Public Clinic Page (clinic.html) — additive only.
+   Reuses: tokens.css (variables), dashboard-sections.css (.profile-hero,
+   .section-card, .slots-grid, .slot-btn, .date-filter), auth.css
+   (.auth-input, .auth-field, .btn-signin) for the booking form.
+   This file only covers what those don't already provide.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.clinic-main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 24px 60px;
+}
+
+.clinic-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;
+}
+.clinic-back:hover { color: var(--text-primary); }
+.clinic-back svg { width: 15px; height: 15px; }
+
+/* ── Photo gallery ── */
+.clinic-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.clinic-gallery img {
+  width: 100%; height: 110px; object-fit: cover;
+  border-radius: var(--r-md); border: 1px solid var(--border);
+}
+
+/* ── Contact rows ── */
+.clinic-contact-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px; color: var(--text-secondary);
+}
+.clinic-contact-row:last-child { border-bottom: none; }
+.clinic-contact-row svg { width: 15px; height: 15px; color: var(--accent-500); flex-shrink: 0; }
+.clinic-contact-row a { color: var(--text-primary); font-weight: 600; }
+.clinic-contact-row a:hover { color: var(--accent-500); }
+
+.clinic-price-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(45,138,110,.1); border: 1px solid rgba(45,138,110,.25);
+  color: var(--accent-500); font-weight: 700; font-size: 13px;
+  padding: 6px 14px; border-radius: var(--r-full); margin-bottom: 16px;
+}
+
+/* ── Map ── */
+#clinic-public-map {
+  width: 100%; height: 220px; border-radius: var(--r-lg);
+  border: 1px solid var(--border); margin-bottom: 22px;
+}
+
+/* ── Booking widget ── */
+.slot-btn.picked { background: var(--accent-500); border-color: var(--accent-500); color: #fff; }
+
+.booking-form-row { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+
+.booking-disabled-notice {
+  text-align: center; padding: 24px 16px; color: var(--text-muted); font-size: 13px;
+  background: var(--bg-elevated); border-radius: var(--r-md); border: 1px dashed var(--border);
+}
+
+.booking-success {
+  text-align: center; padding: 28px 20px;
+}
+.booking-success svg {
+  width: 44px; height: 44px; color: var(--accent-500); margin: 0 auto 12px;
+}
+.booking-success h3 { font-family: var(--font-serif); font-size: 17px; margin-bottom: 6px; }
+.booking-success p { font-size: 13px; color: var(--text-secondary); }
+
+.clinic-not-found {
+  text-align: center; padding: 80px 20px; max-width: 400px; margin: 0 auto;
+}
+.clinic-not-found svg { width: 48px; height: 48px; color: var(--text-muted); margin: 0 auto 16px; }
+.clinic-not-found h2 { font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px; }
+.clinic-not-found p { font-size: 13px; color: var(--text-secondary); }
+
+/* ── Rating summary (in the profile hero) ── */
+.rating-summary {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--text-secondary); margin-top: 4px;
+}
+.rating-summary .stars { display: inline-flex; gap: 1px; }
+.rating-summary .stars svg { width: 14px; height: 14px; }
+.rating-summary .star-filled { color: #f5b93d; fill: #f5b93d; }
+.rating-summary .star-empty { color: var(--border-strong); fill: none; }
+.rating-summary .rating-number { font-weight: 700; color: var(--text-primary); }
+.rating-summary .rating-count { color: var(--text-muted); }
+.rating-summary.no-ratings { color: var(--text-muted); }
+
+/* ── Star picker (rating submission form) ── */
+.star-picker { display: flex; gap: 6px; margin-bottom: 4px; }
+.star-picker button {
+  background: none; border: none; padding: 2px; cursor: pointer;
+  color: var(--border-strong); transition: color var(--t), transform var(--t);
+}
+.star-picker button svg { width: 28px; height: 28px; }
+.star-picker button.active { color: #f5b93d; transform: scale(1.08); }
+
+/* ── Reviews list ── */
+.review-card {
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.review-card:last-child { border-bottom: none; }
+.review-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.review-card-name { font-size: 13px; font-weight: 700; }
+.review-card-date { font-size: 11px; color: var(--text-muted); }
+.review-card-stars { display: flex; gap: 1px; margin-bottom: 6px; }
+.review-card-stars svg { width: 13px; height: 13px; }
+.review-card-comment { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }

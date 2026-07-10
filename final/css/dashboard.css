@@ -1,0 +1,80 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Doctor Dashboard — additive styles only
+   Reuses tokens.css variables exclusively. No new colors introduced.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Doctor account chip (top-right) ─────────────────────────────────────── */
+.doctor-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 6px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  transition: all var(--t);
+  cursor: pointer;
+}
+[dir="rtl"] .doctor-chip { padding: 6px 6px 6px 14px; }
+
+.doctor-chip:hover {
+  border-color: var(--border-strong);
+}
+
+.doctor-chip-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-500);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.doctor-chip-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.doctor-chip-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* ── Dashboard empty/placeholder body ────────────────────────────────────── */
+.dashboard-body {
+  min-height: calc(100vh - 76px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+@media (max-width: 640px) {
+  .doctor-chip-name { display: none; }
+  .doctor-chip { padding: 4px; }
+  [dir="rtl"] .doctor-chip { padding: 4px; }
+}
+
+/* ── AI assistant result panel ───────────────────────────────────────────── */
+.ai-result {
+  margin: 20px auto 0;
+  max-width: 560px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px 20px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  text-align: start;
+}

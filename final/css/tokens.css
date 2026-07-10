@@ -1,0 +1,76 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Design Tokens — Dual Theme (Dark default / Light)
+   Medical green accent throughout — consistent across modes
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Brand accent — stable across both themes ───────────────────────── */
+  --accent-50:   #e8f5f1;
+  --accent-100:  #c2e6db;
+  --accent-300:  #6cb8a0;
+  --accent-500:  #2d8a6e;
+  --accent-600:  #1f7a5e;
+  --accent-700:  #185f49;
+  --accent-glow: #3ea884;
+
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans:  'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+  --r-sm: 8px;  --r-md: 12px; --r-lg: 16px; --r-xl: 24px; --r-full: 9999px;
+  --ease: cubic-bezier(.4,0,.2,1);
+  --t: 180ms var(--ease);
+}
+
+/* ── Dark theme (default) ──────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-page:      #0a0e0d;
+  --bg-surface:   #111614;
+  --bg-elevated:  #161c1a;
+  --bg-input:     #0d1110;
+
+  --text-primary:   #f2f5f3;
+  --text-secondary: #9ba8a3;
+  --text-muted:     #5c6a65;
+
+  --border:        rgba(255,255,255,.08);
+  --border-strong: rgba(255,255,255,.14);
+
+  --glow-1: #2d8a6e;
+  --glow-2: #1a4a3c;
+  --glow-3: #3ea884;
+
+  --glow-gold-1: #c9a84c;
+  --glow-gold-2: #5c4a1f;
+  --glow-gold-3: #e0bc5e;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.4);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,.5);
+}
+
+/* ── Light theme ────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-page:      #f7faf9;
+  --bg-surface:   #ffffff;
+  --bg-elevated:  #ffffff;
+  --bg-input:     #ffffff;
+
+  --text-primary:   #11201b;
+  --text-secondary: #4d5d57;
+  --text-muted:     #8a9893;
+
+  --border:        rgba(17,32,27,.08);
+  --border-strong: rgba(17,32,27,.16);
+
+  --glow-1: #2d8a6e;
+  --glow-2: #a8d9c8;
+  --glow-3: #6cb8a0;
+
+  --glow-gold-1: #c9a84c;
+  --glow-gold-2: #f0e0b0;
+  --glow-gold-3: #d6b85a;
+
+  --shadow-sm: 0 1px 3px rgba(17,32,27,.06);
+  --shadow-md: 0 4px 16px rgba(17,32,27,.08);
+  --shadow-lg: 0 12px 32px rgba(17,32,27,.12);
+}

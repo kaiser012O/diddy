@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Platform — Book instantly</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/search.css">
+
+  <script>
+    (function() {
+      var theme = localStorage.getItem('platform_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="logo-mark">
+    <span class="logo-dot"></span>
+    <span>Your Clinic</span>
+  </a>
+
+  <div class="nav-actions">
+    <button class="lang-btn" id="btn-lang" data-lang-toggle>العربية</button>
+
+    <button class="icon-btn" id="btn-theme" data-i18n-label="theme_toggle_label" aria-label="Toggle theme">
+      <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+      <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+
+    <a href="signin.html" class="btn-create" id="btn-doctor-action">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      <span class="label" data-i18n="nav_create">Create My Clinic</span>
+    </a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div id="aurora-bg" class="aurora-container"></div>
+
+  <div class="hero-inner">
+    <h1 class="hero-title">
+      <span data-i18n="hero_title">Book your appointment</span>
+      <span class="accent" data-i18n="hero_title_accent">in seconds</span>
+    </h1>
+    <p class="hero-sub" data-i18n="hero_sub">Find trusted clinics and book instantly — no account needed</p>
+
+    <div id="search-poda">
+      <div class="search-glow"></div>
+      <div class="search-dark-border"></div>
+      <div class="search-border"></div>
+
+      <div class="search-input-wrap">
+        <input type="search" id="search-input" class="search-input"
+               data-i18n-placeholder="search_placeholder"
+               placeholder="Search doctors, specialties, clinics..."
+               autocomplete="off">
+        <span class="search-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+      </div>
+    </div>
+
+    <div class="filters-row" id="filters-row">
+      <button class="filter-chip active" data-filter="" data-i18n="filter_all">All</button>
+      <button class="filter-chip" data-filter="general" data-i18n="filter_general">General</button>
+      <button class="filter-chip" data-filter="orthodontics" data-i18n="filter_orthodontics">Orthodontics</button>
+      <button class="filter-chip" data-filter="implants" data-i18n="filter_implants">Implants</button>
+      <button class="filter-chip" data-filter="cosmetic" data-i18n="filter_cosmetic">Cosmetic</button>
+      <button class="filter-chip" data-filter="gum" data-i18n="filter_gum">Gum Care</button>
+      <button class="filter-chip" data-filter="root_canal" data-i18n="filter_root_canal">Root Canal</button>
+      <button class="filter-chip" data-filter="pediatric" data-i18n="filter_pediatric">Pediatric</button>
+    </div>
+  </div>
+</section>
+
+<section class="results-section">
+  <div class="container">
+    <div id="doctors-grid" class="doctors-grid"></div>
+
+    <div id="empty-state" class="empty-state">
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/>
+        </svg>
+      </div>
+      <p class="empty-title" data-i18n="empty_no_clinics">No clinics yet</p>
+      <p class="empty-sub" data-i18n="empty_no_clinics_sub">Be the first to create your clinic page</p>
+    </div>
+  </div>
+</section>
+
+<div id="site-footer"></div>
+
+<script type="module">
+import { initI18n, toggleLang, applyLangToDOM } from './js/i18n.js';
+import { initTheme, toggleTheme, getTheme } from './js/theme.js';
+import { mountAurora } from './js/aurora.js';
+import { auth, onAuthStateChanged } from './js/firebase.js';
+import { initIndexApp } from './js/index-app.js';
+import { mountFooter } from './js/footer.js';
+
+initTheme();
+initI18n();
+initIndexApp();
+mountFooter();
+
+function syncThemeIcon() {
+  const isDark = getTheme() === 'dark';
+  document.getElementById('theme-icon-sun').classList.toggle('hidden', !isDark);
+  document.getElementById('theme-icon-moon').classList.toggle('hidden', isDark);
+}
+syncThemeIcon();
+
+document.getElementById('btn-theme').addEventListener('click', () => {
+  toggleTheme();
+  syncThemeIcon();
+});
+
+document.getElementById('btn-lang').addEventListener('click', () => {
+  toggleLang();
+});
+
+mountAurora('aurora-bg', { amplitude: 0.9, blend: 0.5, speed: 0.6 });
+
+document.getElementById('filters-row').addEventListener('click', e => {
+  const chip = e.target.closest('.filter-chip');
+  if (!chip) return;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// 🔗 DOCTOR NAV BUTTON — reflects real sign-in state
+// Signed out → "Create My Clinic" → signin.html
+// Signed in  → "My Dashboard"     → dashboard.html
+// Without this check, a signed-in doctor coming back to the homepage would
+// still see "Create My Clinic" as if they'd never signed in.
+// ─────────────────────────────────────────────────────────────────────────
+const navBtn = document.getElementById('btn-doctor-action');
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    navBtn.href = 'dashboard.html';
+    navBtn.dataset.i18n = 'nav_dashboard';
+  } else {
+    navBtn.href = 'signin.html';
+    navBtn.dataset.i18n = 'nav_create';
+  }
+  applyLangToDOM(); // re-render the label in the current language
+});
+</script>
+
+</body>
+</html>

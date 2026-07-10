@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doctor Sign In</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/auth.css">
+
+  <script>
+    (function() {
+      var theme = localStorage.getItem('platform_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+
+<div class="auth-page">
+
+  <!-- Aurora background — same as index, dimmer -->
+  <div id="aurora-bg" class="aurora-container" style="opacity:.6"></div>
+
+  <!-- Back to home -->
+  <a href="index.html" class="auth-back">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    <span data-i18n="auth_back">Back to home</span>
+  </a>
+
+  <!-- Lang / theme toggles, top right -->
+  <div class="nav-actions" style="position:absolute;top:24px;right:24px;z-index:2;">
+    <button class="lang-btn" id="btn-lang" data-lang-toggle>العربية</button>
+    <button class="icon-btn" id="btn-theme" aria-label="Toggle theme">
+      <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+      <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ═══ AUTH CARD ═══════════════════════════════════════════════════════ -->
+  <div class="auth-card">
+
+    <div class="auth-logo">
+      <span class="logo-dot"></span>
+      <span>Platform</span>
+    </div>
+
+    <h1 class="auth-heading" data-i18n="auth_heading">Doctor sign in</h1>
+    <p class="auth-subheading" data-i18n="auth_subheading">Manage your clinic and bookings</p>
+
+    <!-- ─── Google Sign-In block ───────────────────────────────────────────
+         🔗 FIREBASE WIRING POINT:
+         On click → signInWithPopup(auth, new GoogleAuthProvider())
+         First-time sign-in auto-creates the Firebase user + doctors/{uid} record.
+         Returning sign-in just logs them in — same uid, same data.
+    ──────────────────────────────────────────────────────────────────── -->
+    <div class="auth-google-block">
+      <button type="button" class="btn-google" id="btn-google-signin">
+        <svg viewBox="0 0 488 512" fill="currentColor">
+          <path d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"/>
+        </svg>
+        <span data-i18n="auth_google">Continue with Google</span>
+      </button>
+    </div>
+
+    <div class="auth-divider" data-i18n="auth_divider">or sign in with email</div>
+
+    <!-- ─── Email / Password form ──────────────────────────────────────────
+         ⚠️ NOT a sign-up form. This only authenticates an EXISTING account
+         (one created earlier via Google, or via email/password directly).
+         There is no "create account" link here by design.
+
+         🔗 FIREBASE WIRING POINT:
+         On submit → signInWithEmailAndPassword(auth, email, password)
+         On error  → map Firebase error codes to auth_error_invalid / auth_error_generic
+    ──────────────────────────────────────────────────────────────────── -->
+    <form class="auth-form" id="signin-form" novalidate>
+      <div id="auth-error" class="auth-error hidden"></div>
+
+      <div class="auth-field">
+        <label for="auth-email" data-i18n="auth_email_label">Email</label>
+        <input type="email" id="auth-email" class="auth-input"
+               data-i18n-placeholder="auth_email_placeholder"
+               placeholder="you@example.com" autocomplete="email" required>
+      </div>
+
+      <div class="auth-field">
+        <label for="auth-password" data-i18n="auth_password_label">Password</label>
+        <input type="password" id="auth-password" class="auth-input"
+               data-i18n-placeholder="auth_password_placeholder"
+               placeholder="Enter your password" autocomplete="current-password" required>
+        <div class="auth-forgot">
+          <a href="#" id="link-forgot" data-i18n="auth_forgot">Forgot password?</a>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-signin" id="btn-submit">
+        <span id="btn-submit-text" data-i18n="auth_submit">Sign in</span>
+      </button>
+    </form>
+
+    <p class="auth-hint" data-i18n="auth_hint">
+      First time? Sign in with Google to create your account automatically.
+    </p>
+
+  </div>
+
+</div>
+
+<script type="module">
+import { initI18n, toggleLang, t } from './js/i18n.js';
+import { initTheme, toggleTheme, getTheme } from './js/theme.js';
+import { mountAurora } from './js/aurora.js';
+import { signInWithGoogle, signInWithEmail, resetPassword, mapAuthError } from './js/firebase.js';
+
+initTheme();
+initI18n();
+
+function syncThemeIcon() {
+  const isDark = getTheme() === 'dark';
+  document.getElementById('theme-icon-sun').classList.toggle('hidden', !isDark);
+  document.getElementById('theme-icon-moon').classList.toggle('hidden', isDark);
+}
+syncThemeIcon();
+
+document.getElementById('btn-theme').addEventListener('click', () => {
+  toggleTheme();
+  syncThemeIcon();
+});
+document.getElementById('btn-lang').addEventListener('click', toggleLang);
+
+mountAurora('aurora-bg', { amplitude: 0.7, blend: 0.5, speed: 0.4 });
+
+// ── Error display helper ────────────────────────────────────────────────
+function showError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+function hideError() {
+  document.getElementById('auth-error').classList.add('hidden');
+}
+
+// ── GOOGLE SIGN-IN ──────────────────────────────────────────────────────
+const btnGoogle = document.getElementById('btn-google-signin');
+btnGoogle.addEventListener('click', async () => {
+  hideError();
+  btnGoogle.disabled = true;
+  try {
+    await signInWithGoogle();
+    window.location.href = 'dashboard.html';
+  } catch (err) {
+    // auth/popup-closed-by-user just means they cancelled — no error needed
+    if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+      console.error('[Auth] Google sign-in failed:', err);
+      showError(t(mapAuthError(err)));
+    }
+  } finally {
+    btnGoogle.disabled = false;
+  }
+});
+
+// ── EMAIL/PASSWORD SIGN-IN ──────────────────────────────────────────────
+// This form only signs in an EXISTING account — no sign-up flow here.
+document.getElementById('signin-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  hideError();
+
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+
+  if (!email || !password) {
+    showError(t('auth_error_fields'));
+    return;
+  }
+
+  const btn     = document.getElementById('btn-submit');
+  const btnText = document.getElementById('btn-submit-text');
+  btn.disabled  = true;
+  const original = btnText.textContent;
+  btnText.innerHTML = '<span class="auth-spinner"></span>';
+
+  try {
+    await signInWithEmail(email, password);
+    window.location.href = 'dashboard.html';
+  } catch (err) {
+    console.error('[Auth] Email sign-in failed:', err);
+    showError(t(mapAuthError(err)));
+    btn.disabled = false;
+    btnText.textContent = original;
+  }
+});
+
+document.getElementById('link-forgot').addEventListener('click', async (e) => {
+  e.preventDefault();
+  hideError();
+
+  const email = document.getElementById('auth-email').value.trim();
+  if (!email) {
+    showError(t('auth_error_fields'));
+    return;
+  }
+
+  try {
+    await resetPassword(email);
+    showError(t('auth_reset_sent')); // reuses the error box as a status message
+  } catch (err) {
+    console.error('[Auth] Password reset failed:', err);
+    showError(t(mapAuthError(err)));
+  }
+});
+</script>
+
+</body>
+</html>

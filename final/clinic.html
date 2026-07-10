@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>صفحة العيادة — Platform</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <link rel="stylesheet" href="css/dashboard-sections.css">
+  <link rel="stylesheet" href="css/clinic.css">
+
+  <script>
+    (function() {
+      var theme = localStorage.getItem('platform_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="logo-mark">
+    <span class="logo-dot"></span>
+    <span>Platform</span>
+  </a>
+  <div class="nav-actions">
+    <button class="icon-btn" id="btn-theme" aria-label="Toggle theme">
+      <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+      <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<main class="clinic-main" id="clinic-main">
+  <a href="index.html" class="clinic-back">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    <span>العودة للرئيسية</span>
+  </a>
+
+  <div id="clinic-content">
+    <div class="empty-state-mini">جاري التحميل...</div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script type="module">
+import { initTheme, toggleTheme, getTheme } from './js/theme.js';
+import { initClinicPage } from './js/clinic-app.js';
+import { mountFooter } from './js/footer.js';
+
+initTheme();
+mountFooter();
+
+function syncThemeIcon() {
+  const isDark = getTheme() === 'dark';
+  document.getElementById('theme-icon-sun').classList.toggle('hidden', !isDark);
+  document.getElementById('theme-icon-moon').classList.toggle('hidden', isDark);
+}
+syncThemeIcon();
+
+document.getElementById('btn-theme').addEventListener('click', () => {
+  toggleTheme();
+  syncThemeIcon();
+});
+
+const params = new URLSearchParams(window.location.search);
+const doctorId = params.get('doctorId');
+const ratingBookingId = params.get('rate');
+initClinicPage(doctorId, ratingBookingId);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "clinicai-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ClinicAI — runs fully standalone on plain Node.js/Express, no Vercel or other external service needed to run it locally.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "firebase-admin": "^12.0.0",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
